@@ -1,0 +1,78 @@
+extends VehicleBody3D
+
+@export var MAX_STEER = 0.9
+@export var ENGINE_POWER = 300
+
+@export var thruster_force: float = 15.0 # Мощность ускорителей
+
+# Ссылки на маркеры ускорителей (перетащите их сюда из сцены)
+@export var fl_thruster: Node3D
+@export var fr_thruster: Node3D
+@export var rl_thruster: Node3D
+@export var rr_thruster: Node3D
+
+func _physics_process(delta: float) -> void:
+	# 1. Ваше стандартное управление колесами
+	steering = move_toward(steering, Input.get_axis("right", "left") * MAX_STEER, delta * 10)
+	engine_force = Input.get_axis("back", "forward") * ENGINE_POWER
+
+	# 2. Логика ускорителей по вашему заданию
+	var boost_all = Input.is_action_pressed("ui_accept") # Пробел
+	var move_left = Input.is_action_pressed("ui_left")     # Лево
+	var move_right = Input.is_action_pressed("ui_right")   # Право
+	var move_up = Input.is_action_pressed("ui_up")         # Вверх
+	var move_down = Input.is_action_pressed("ui_down")     # Вниз
+
+	var fl_power = 0.0
+	var fr_power = 0.0
+	var rl_power = 0.0
+	var rr_power = 0.0
+
+	# Пробел: работают все 4
+	if boost_all:
+		fl_power += 1.0
+		fr_power += 1.0
+		rl_power += 1.0
+		rr_power += 1.0
+
+	# Клавиша "Лево": левые вперед, правые назад
+	if move_left:
+		fl_power += 1.0
+		rl_power += 1.0
+		fr_power -= 1.0
+		rr_power -= 1.0
+
+	# Клавиша "Право": правые вперед, левые назад
+	if move_right:
+		fr_power += 1.0
+		rr_power += 1.0
+		fl_power -= 1.0
+		rl_power -= 1.0
+
+	# Клавиша "Вверх": работают только передние два
+	if move_up:
+		fl_power += 1.0
+		fr_power += 1.0
+
+	# Клавиша "Вниз": работают только задние два
+	if move_down:
+		rl_power += 1.0
+		rr_power += 1.0
+
+	# Применяем физические силы от ускорителей (так как VehicleBody3D наследуется от RigidBody3D)
+	apply_thruster_force(fl_thruster, fl_power)
+	apply_thruster_force(fr_thruster, fr_power)
+	apply_thruster_force(rl_thruster, rl_power)
+	apply_thruster_force(rr_thruster, rr_power)
+
+# Вспомогательная функция для расчета и применения силы
+func apply_thruster_force(thruster: Node3D, power_multiplier: float) -> void:
+	if not thruster:
+		return
+	
+	# Направление тяги (отрицательная ось Z маркера)
+	var force_direction = -thruster.global_transform.basis.z
+	var total_force = force_direction * thruster_force * power_multiplier
+	
+	# Прикладываем силу в точке расположения ускорителя
+	apply_force(total_force, thruster.global_position - global_position)
