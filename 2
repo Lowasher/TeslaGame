@@ -1,0 +1,114 @@
+extends VehicleBody3D
+
+@export var MAX_STEER = 0.9
+@export var ENGINE_POWER = 300
+
+@export_group("Thrusters Setup")
+@export var thruster_force: float = 15.0 
+
+# Ссылки на маркеры ускорителей
+@export var fl_thruster: Node3D
+@export var fr_thruster: Node3D
+@export var rl_thruster: Node3D
+@export var rr_thruster: Node3D
+
+@export_group("Flight Stabilization")
+# Коэффициент сопротивления вращению в воздухе (чем выше, тем быстрее машина прекращает крутиться сама)
+@export var angular_drag: float = 2.0 
+# Сопротивление движению, чтобы в полете машина плавно замедлялась
+@export var linear_drag: float = 0.5 
+
+func _physics_process(delta: float) -> void:
+	# 1. Стандартное управление колесами
+	steering = move_toward(steering, Input.get_axis("right", "left") * MAX_STEER, delta * 10)
+	engine_force = Input.get_axis("back", "forward") * ENGINE_POWER
+
+	# 2. Считывание клавиш для ускорителей
+	var boost_all = Input.is_action_pressed("ui_accept") # Пробел
+	var move_left = Input.is_action_pressed("ui_left")     # Лево
+	var move_right = Input.is_action_pressed("ui_right")   # Право
+	var move_up = Input.is_action_pressed("ui_up")         # Вверх
+	var move_down = Input.is_action_pressed("ui_down")     # Вниз
+
+	var fl_power = 0.0
+	var fr_power = 0.0
+	var rl_power = 0.0
+	var rr_power = 0.0
+
+	# Пробел: работают все 4
+	if boost_all:
+		fl_power += 1.0
+		fr_power += 1.0
+		rl_power += 1.0
+		rr_power += 1.0
+
+	# Клавиша "Лево": левые вперед, правые назад
+	if move_left:
+		fl_power += 1.0
+		rl_power += 1.0
+		fr_power -= 1.0
+		rr_power -= 1.0
+
+	# Клавиша "Право": правые вперед, левые назад
+	if move_right:
+		fr_power += 1.0
+		rr_power += 1.0
+		fl_power -= 1.0
+		rl_power -= 1.0
+
+	# Клавиша "Вверх": работают только передние два
+	if move_up:
+		fl_power += 1.0
+		fr_power += 1.0
+
+	# Клавиша "Вниз": работают только задние два
+	if move_down:
+		rl_power += 1.0
+		rr_power += 1.0
+
+	# 3. Применяем силы и управляем визуалом (партиклами/светом)
+	apply_thruster_with_effects(fl_thruster, fl_power, delta)
+	apply_thruster_with_effects(fr_thruster, fr_power, delta)
+	apply_thruster_with_effects(rl_thruster, rl_power, delta)
+	apply_thruster_with_effects(rr_thruster, rr_power, delta)
+
+	# 4. Система стабилизации (гасим бесконечное вращение и скольжение)
+	apply_stabilization(delta)
+
+# Функция применения силы + включение визуальных эффектов
+func apply_thruster_with_effects(thruster: Node3D, power_multiplier: float, delta: float) -> void:
+	if not thruster:
+		return
+	
+	# Находим дочерние эффекты внутри маркера (если они есть)
+	var particles = thruster.get_node_or_null("GPUParticles3D") # Или CPUParticles3D
+	var light = thruster.get_node_or_null("OmniLight3D")
+	
+	# Если двигатель работает (мощность не нулевая)
+	if abs(power_multiplier) > 0.01:
+		# Физическая сила
+		var force_direction = -thruster.global_transform.basis.z
+		var total_force = force_direction * thruster_force * power_multiplier
+		apply_force(total_force, thruster.global_position - global_position)
+		
+		# Включаем визуал
+		if particles:
+			particles.emitting = true
+		if light:
+			light.visible = true
+			light.light_energy = abs(power_multiplier) * 2.0 # Яркость зависит от мощности
+	else:
+		# Выключаем визуал, если двигатель молчит
+		if particles:
+			particles.emitting = false
+		if light:
+			light.visible = false
+
+# Функция стабилизации полета
+func apply_stabilization(delta: float) -> void:
+	# Плавно гасим угловую скорость (чтобы машина не крутилась вечно)
+	angular_velocity = angular_velocity.lerp(Vector3.ZERO, angular_drag * delta)
+	
+	# Если машина в воздухе (например, можно проверить контакт колес, но для простоты применим легкое сопротивление)
+	# Это предотвратит бесконечное скольжение в полете
+	linear_velocity = linear_velocity.lerp(linear_velocity * 0.99, linear_drag * delta)
