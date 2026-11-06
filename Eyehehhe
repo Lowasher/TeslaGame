@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Городские выходные — Контакты</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header class="site-header">
+        <a class="brand" href="index.html">Городские выходные</a>
+        <nav aria-label="Основное меню">
+            <a href="index.html">Главная</a>
+            <a href="places.html">Места</a>
+            <a href="contact.html">Контакты</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Контакты</h1>
+        <p>Свяжитесь с организаторами проекта для предложений, сотрудничества или добавления новых локаций в наш каталог.</p>
+
+        <section class="contact-info">
+            <h2>Наши данные</h2>
+            <p><strong>Телефон:</strong> <a href="tel:+70000000000">+7 (000) 000-00-00</a></p>
+            <p><strong>Email:</strong> <a href="mailto:example@example.com">example@example.com</a></p>
+            <p><strong>Адрес офиса:</strong> г. Москва, ул. Примерная, д. 10</p>
+        </section>
+
+        <p><a href="index.html">Вернуться на главную страницу</a></p>
+    </main>
+
+    <footer class="site-footer">
+        <p>Проект для практики по верстке</p>
+    </footer>
+
+</body>
+</html>
